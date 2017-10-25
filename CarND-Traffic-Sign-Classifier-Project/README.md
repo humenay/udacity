@@ -15,11 +15,11 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [image1]: ./submission/dataVis.png "Visualization"
-[image2]: ./examples/1.png "Traffic Sign 1"
-[image3]: ./examples/2.png "Traffic Sign 2"
-[image4]: ./examples/3.png "Traffic Sign 3"
-[image5]: ./examples/4.png "Traffic Sign 4"
-[image6]: ./examples/5.png "Traffic Sign 5"
+[image2]: ./my_new_images/1.png "Traffic Sign 1"
+[image3]: ./my_new_images/2.png "Traffic Sign 2"
+[image4]: ./my_new_images/3.png "Traffic Sign 3"
+[image5]: ./my_new_images/4.png "Traffic Sign 4"
+[image6]: ./my_new_images/5.png "Traffic Sign 5"
 
 
 Here is a link to my [project code](https://github.com/humenay/udacity/blob/master/CarND-Traffic-Sign-Classifier-Project/Traffic_Sign_Classifier.ipynb)
@@ -136,49 +136,54 @@ The model was able to correctly guess 4 of the 5 traffic signs, which gives an a
 
 
 Sign 1 (index is 5):
+
 | Probability         	|     Prediction	        					| 
 |:---------------------:|:---------------------------------------------:| 
-| 1.00000000e+00         			| 1   									| 
-| 3.19921645e-09     				| 2 										|
-| 8.30630231e-10					| 5											|
-| 1.33716135e-10	      			| 3					 				|
-| 7.24599010e-14				    | 14      							|
+| 1.000e+00			| 1   									| 
+| 4.313e-06     			| 2 										|
+| 2.176e-08					| 5											|
+| 9.022e-09	      			| 3					 				|
+| 1.216e-09				    | 14      							|
 
 Sign 2 (index is 17):
+
 | Probability         	|     Prediction	        					| 
 |:---------------------:|:---------------------------------------------:| 
-| 1.00000000e+00         			| 17   								| 
-| 5.53777944e-15     				| 33 								|
-| 5.67539537e-17					| 14								|
-| 2.94318611e-26	      			| 26					 			|
-| 4.37442169e-27				    | 8      							|
+| 1.000e+00         			| 17   								| 
+| 1.360e-11     				| 33 								|
+| 3.319e-23					| 14								|
+| 4.140e-24	      			| 26					 			|
+| 1.073e-24				    | 8      							|
 
 Sign 3 (index is 13):
+
 | Probability         	|     Prediction	        					| 
 |:---------------------:|:---------------------------------------------:| 
-| 1.00000000e+00         			| 13   								| 
-|5.98226955e-21     				| 35 								|
-| 4.96197377e-21					| 9									|
-| 1.14820736e-24	      			| 15					 			|
-| 1.12493738e-26				    | 33      							|
+| 1.000e+00         			| 13   								| 
+| 7.778e-12    				| 35 								|
+| 3.849e-16					| 9									|
+| 6.189e-18	      			| 15					 			|
+| 1.678e-19				    | 33      							|
 
 Sign 4 (index is 14):
+
 | Probability         	|     Prediction	        					| 
 |:---------------------:|:---------------------------------------------:| 
-|9.99999762e-01         			| 14   								| 
-|2.35856689e-07     				| 33 								|
-|3.21441078e-08					| 13									|
-|1.71886316e-09	      			| 35					 				|
-|1.87380680e-10				    | 25      							|
+|1.000e+00         			| 14   								| 
+|5.391e-08     				| 33 								|
+|5.185e-08					| 13									|
+|3.598e-08	      			| 35					 				|
+|7.981e-09				    | 25      							|
 
 Sign 5 (index is 25):
+
 | Probability         	|     Prediction	        					| 
 |:---------------------:|:---------------------------------------------:| 
-|9.99999762e-01         			| 25   									| 
-|1.58199946e-05     				| 22 										|
-|1.87849434e-06					| 31										|
-1.61548701e-06	      			| 29					 				|
-|1.03638996e-07				    | 39      							|
+|9.965e-01         			| 25   									| 
+|1.846e-03     				| 22 										|
+|1.676e-03					| 31										|
+|1.355e-05	      			| 29					 				|
+|1.459e-06				    | 39      							|
 
 The 80km/hr sign was not classified correctly. It is worth noting that the top 5 softmax values were all numbers with signs so apparently 
 the classifier is having an issue with numbers
