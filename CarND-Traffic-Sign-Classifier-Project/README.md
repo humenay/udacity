@@ -14,7 +14,7 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./submission/dataVis.png "Visualization"
+[image1]: ./dataVis.png "Visualization"
 [image2]: ./my_new_images/1.png "Traffic Sign 1"
 [image3]: ./my_new_images/2.png "Traffic Sign 2"
 [image4]: ./my_new_images/3.png "Traffic Sign 3"
