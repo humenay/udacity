@@ -14,7 +14,7 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./dataVis.png "Visualization"
+[image1]:  ./dataVis.png "Visualization"
 [image2]: ./my_new_images/1.png "Traffic Sign 1"
 [image3]: ./my_new_images/2.png "Traffic Sign 2"
 [image4]: ./my_new_images/3.png "Traffic Sign 3"
@@ -50,8 +50,9 @@ Here is an exploratory visualization of the data set where 12 traffic signs were
 The following preprocessing techniques were applied:
 1)Converting rgb to grayscale
 2)Normalization
+3)Augmenting Brightness of Image 
 
-I chose these preprocessing techniques because they were suggested in the course material. 
+I chose these preprocessing techniques because they were suggested in the course material. I chose to augment the brightness because of the info found in the following [link](https://medium.com/@vivek.yadav/improved-performance-of-deep-learning-neural-network-models-on-traffic-sign-classification-using-6355346da2dc)
 
 
 #### 2.2 Describe what your final model architecture looks like including model type, layers, layer sizes, connectivity, etc.)
@@ -87,9 +88,10 @@ My model was based off of the LeNet architecture. My final model consisted of th
 #### 2.3. Model Training 
 
 To train the model, I used the following parameters.
-EPOCHS = 20
+EPOCHS = 25
 BATCH_SIZE = 128
 rate = 0.001
+
 
 #### 2.4Solution Approach 
 I orignally implemented the normalization routine. 
@@ -97,7 +99,6 @@ The second sthing I did was apply the gray scale preprocessing technique and I s
 Third thing I did was try several different learning rates and I saw that this did not have much of an impact on accuracy
 The fourth thing I did is experimented with the hyperbolic tangent activation function and I saw that this did not have a positive impact on accuracy. 
 The 5th thing I did was to implement a dropout layer. This had a positive impact on accuracy so I kept it. 
-Last, I increased my epoch's to 20
 
 
 My final model results were:
@@ -113,6 +114,14 @@ Here are five German traffic signs that I found on the web:
 
 ![alt text][image2] ![alt text][image3] ![alt text][image4] 
 ![alt text][image5] ![alt text][image6]
+
+Per the eye test, all 5 of my images should be simple to classify. 
+
+Several things that could make a sign image hard to classify:
+* angled image of sign
+* graffiti
+* sign not in database
+* graffiti/vandalism
 
 
 
