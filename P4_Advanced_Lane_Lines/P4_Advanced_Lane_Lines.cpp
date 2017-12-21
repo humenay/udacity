@@ -21,6 +21,10 @@ deque<vector<double>> lSmoothReal;
 deque<vector<double>> rSmoothReal;
 vector<cv::Point> allPoints;
 const int SMOOTHING_WIN_SIZE = 10;
+const double YM_PER_PIX = 30.0/ 720;
+const double XM_PER_PIX = 3.7/700;
+
+#define WRITE_VIDEO_ENABLED 0
 
 
 /*
@@ -38,8 +42,13 @@ void calibrate(Mat & intrinsic, Mat & distCoeffs, bool saveUndistorted)
 
 	vector< Point3f > obj;
 	for (int i = 0; i < 6; i++)
+	{
 		for (int j = 0; j < 9; j++)
+		{
+			//0.025423 is the estimated width/height in meters of a square on a calibration image 
 			obj.push_back(Point3f((float)j * 0.02423, (float)i * 0.02423, 0));
+		}
+	}
 
 	glob(".\\camera_cal\\", files);
 	for (size_t i = 0; i < files.size(); i++)
@@ -104,39 +113,47 @@ void initWarpImg(Mat & M, Mat & Minv)
 
 void applyFilters(Mat in, Mat & out)
 {
-	Mat tmp,tmpHSV,tmpHLS,gray,sobelx;
-
-	cv::cvtColor(in, tmpHLS, CV_RGB2HLS);
-	cv::cvtColor(in, tmpHSV, CV_RGB2HSV);
+	Mat origHSV,tmpHSV,tmpHLS,tmpLAB,gray,sobelx;
 
 	//Apply light filter in HLS space
-	inRange(tmpHLS, cv::Scalar(1, 1, 180), cv::Scalar(255, 255, 255), tmp);
-	//bitwise_or(tmp, out, out);
-	out = tmp;
-	
+	cv::cvtColor(in, tmpHLS, CV_RGB2HLS);
+	inRange(tmpHLS, cv::Scalar(1, 160, 180), cv::Scalar(255, 255, 255), tmpHLS);
+	out = tmpHLS;
+
 	//Apply HSV Filters to attempt to extract white and yellow lines
-	inRange(tmpHSV, cv::Scalar(0, 50, 240), cv::Scalar(180, 255, 255), tmp);
-	bitwise_or(tmp, out, out);
+	cv::cvtColor(in, origHSV, CV_RGB2HSV);
+	tmpHSV = origHSV.clone();
+	inRange(tmpHSV, cv::Scalar(0, 50, 240), cv::Scalar(180, 255, 255), tmpHSV);//yellow
+	bitwise_or(tmpHSV, out, out);
 
-	inRange(tmpHSV, cv::Scalar(0, 0, 240), cv::Scalar(40, 23, 255), tmp);
-	bitwise_or(tmp, out, out);
+	tmpHSV = origHSV.clone();
+	inRange(tmpHSV, cv::Scalar(0, 0, 240), cv::Scalar(40, 23, 255), tmpHSV);
+	bitwise_or(tmpHSV, out, out);
 
-	inRange(tmpHSV, cv::Scalar(150, 0, 230), cv::Scalar(180, 10, 255), tmp);
-	bitwise_or(tmp, out, out);
+	tmpHSV = origHSV.clone();
+	inRange(tmpHSV, cv::Scalar(150, 0, 230), cv::Scalar(180, 10, 255), tmpHSV);//white
+	bitwise_or(tmpHSV, out, out);
+	
+	cv::cvtColor(in, tmpLAB, CV_RGB2Lab);
+	inRange(tmpLAB, cv::Scalar(0,118, 0), cv::Scalar(255, 148, 255), tmpLAB);
+	bitwise_not(tmpLAB, tmpLAB);
+	bitwise_or(tmpLAB, out, out);
 
-	//Apply sobel detection which is similar to Canny edge detection
+	//Apply sobel detection which is similar to Canny edge detection. This mainly helps with white lines that 
+	//are farthest away
 	cvtColor(in, gray, CV_RGB2GRAY);
+	GaussianBlur(gray, gray, cv::Size(7, 7), 3, 3);
 	Sobel(gray, sobelx, CV_8U, 1, 0);
-
+	
 	//if a matrix value is above threshold of 50 then make it 255 which is akin to 1 in a binary image
 	threshold(sobelx, sobelx, 50, 255, CV_THRESH_BINARY);
+	
+	bitwise_or(sobelx, out,out);
 
-	//combine sobel with HLS and HSV filtered matrix
-	bitwise_or(sobelx, out, out);
 }
 
 /*
-* This original version of this code can be found on 
+* This original version of this function can be found on 
 * http://www.bragitoff.com/2015/09/c-program-for-polynomial-fit-least-squares/
 */
 vector<double> mPolyfit(Mat scatter, bool convertToRealWorld)
@@ -264,21 +281,35 @@ vector<double> mPolyfit(Mat scatter, bool convertToRealWorld)
 	return retVal;
 }
 
+/*
+* For each hot pixel in a window generate a random variable +-40 centered around the hot pixel
+*/
 void generateFakeData(Mat & left, Mat & right, int windowHeight, int windowStartY, int leftWindowIdx, int rightWindowIdx)
 {
+	int randNumL = 0;
+	int randNumR = 0;
+	int xLeft = 0;
+	int xRight = 0;
+	int y = 0;
+
 	for (int i = 0; i < (windowHeight); i++)
 	{
 
-		int randNumL = rand() % (80) - 40;
-		int randNumR = rand() % (80) - 40;
-		int xLeft = randNumL + leftWindowIdx;
-		int xRight = randNumR + rightWindowIdx;
-		int y = windowStartY - i;
+		randNumL = rand() % (80) - 40;
+		randNumR = rand() % (80) - 40;
+		xLeft = randNumL + leftWindowIdx;
+		xRight = randNumR + rightWindowIdx;
+		y = windowStartY - i;
+		//should gauruntee a data point is generated for every y value but this is not necessarily the case  
+		//as the code is currently written
 		if (xLeft < 1280 && xLeft >= 0)
+		{
 			left.at<uchar>(cv::Point(xLeft, y)) = 255;
-
+		}
 		if (xRight < 1280 && xRight >= 0)
+		{
 			right.at<uchar>(cv::Point(xRight, y)) = 255;
+		}
 	}
 }
 
@@ -343,13 +374,13 @@ vector<double> getSmoothedEq(deque<vector<double>> eq)
 
 	return retVal;
 }
-
+//calculates the curvature and the center offset and inserts the values onto final img
 void insertCurvatureOffset(Mat & in)
 {
 	std::ostringstream streamCurv;
 	std::ostringstream streamOffset;
 	streamCurv << "curvature ";
-	streamCurv << std::setprecision(0);
+	
 
 	streamOffset << "offset ";
 	streamOffset << std::setprecision(0);
@@ -361,20 +392,24 @@ void insertCurvatureOffset(Mat & in)
 		//offset
 		vector<double> leftEqSmooth = getSmoothedEq(lSmooth);
 		vector<double> rightEqSmooth = getSmoothedEq(rSmooth);
-		double xL = leftEqSmooth[0] + leftEqSmooth[1] * 719 + leftEqSmooth[2] * 719*719;
-		double xR = rightEqSmooth[0] + rightEqSmooth[1] * 719 + rightEqSmooth[2] * 719 * 719;
-		double offset = .0052857*abs(640-((xL+xR)/2));
+		double nRows = (double)in.rows;
+		double nCols = (double)in.cols;
+
+		double xL = leftEqSmooth[0] + leftEqSmooth[1] * (nRows-1) + leftEqSmooth[2] * pow(nRows-1,2);
+		double xR = rightEqSmooth[0] + rightEqSmooth[1] * (nRows-1) + rightEqSmooth[2] * pow(nRows - 1, 2);
+		double offset = XM_PER_PIX*abs((nCols/2)-((xL+xR)/2));
+	
 		
-		double left_curverad = ((1 + pow(pow((2 * leftEqRealSmooth[2] * 720 * .041667 + leftEqRealSmooth[1]), 2), 1.5) / abs(2 * leftEqRealSmooth[2])));
-		double right_curverad = ((1 + pow(pow((2 * rightEqRealSmoothed[2] * 720 * .041667 + rightEqRealSmoothed[1]), 2), 1.5) / abs(2 * rightEqRealSmoothed[2])));
+		double left_curverad = ((1 + pow(pow((2 * leftEqRealSmooth[2] * nRows * YM_PER_PIX + leftEqRealSmooth[1]), 2), 1.5) / abs(2 * leftEqRealSmooth[2])));
+		double right_curverad = ((1 + pow(pow((2 * rightEqRealSmoothed[2] * nRows * YM_PER_PIX + rightEqRealSmoothed[1]), 2), 1.5) / abs(2 * rightEqRealSmoothed[2])));
 		double ave_curverad = (left_curverad + right_curverad) / 2;
-		//std::string ave_str = msclr::interop::marshal_as<std::string>("curvature " + ave_curverad.ToString("#."));
-		streamCurv << ave_curverad;
+	
+		streamCurv << std::fixed << std::setprecision(0) <<ave_curverad;
 		putText(in, streamCurv.str(), cv::Point(10, 30), FONT_HERSHEY_PLAIN, 2, Scalar::all(255), 3, 8);
-		//std::string ave_str = "curvature " +  to_string(ave_curverad);
-		streamOffset << offset;
+		
+		streamOffset << std::fixed << std::setprecision(2) << offset;
 		putText(in, streamOffset.str(), cv::Point(30, 70), FONT_HERSHEY_PLAIN, 2, Scalar::all(255), 3, 8);
-		//putText(in, ave_str, cv::Point(10, 30), FONT_HERSHEY_PLAIN, 2, Scalar::all(255), 3, 8);
+	
 	}
 }
 
@@ -405,8 +440,7 @@ void getLaneIndices(Mat img, int windowStartY, int windowSizeY, int leftWindowSt
 		for (int i = windowStartX; i < (windowStartX + windowSizeX); i++)
 		{
 			sums = 0;
-			//for (int j = binaryWarped.rows / 2; j < binaryWarped.rows; j++)
-			//for (int j = windowStartY; j < (windowStartY + windowSizeY); j++)
+
 			for (int j = 0; j < (windowSizeY); j++)
 			{
 				try
@@ -419,12 +453,11 @@ void getLaneIndices(Mat img, int windowStartY, int windowSizeY, int leftWindowSt
 				}
 			}
 
-			//if (i < binaryWarped.cols / 2)
 			if (k == 0)
 			{
 				if (sums > max_left && sums >= minPix)
 				{
-					//leftIdx = i;
+
 					max_left = sums;
 					ltIdxGrp.clear();
 					ltIdxGrp.push_back(i);
@@ -439,7 +472,7 @@ void getLaneIndices(Mat img, int windowStartY, int windowSizeY, int leftWindowSt
 			{
 				if (sums > max_right && sums >= minPix)
 				{
-					//rightIdx = i;
+
 					max_right = sums;
 					rtIdxGrp.clear();
 					rtIdxGrp.push_back(i);
@@ -474,13 +507,14 @@ void getLaneIndices(Mat img, int windowStartY, int windowSizeY, int leftWindowSt
 		rightIdx = sums / rtIdxGrp.size();
 	}
 }
-
+/*
+* returns a vector of points predicted by the polynomial fit equation
+*/
 vector<cv::Point> detectLanes(Mat in)
 {
 	const int numWindowsY = 12;
-	const int maxPixThresh = 40000;
 
-	int margin = in.cols / 4;
+	int margin = 200; //the width in pixels of our search window
 	vector<double> leftEqReal;
 	vector<double> rightEqReal;
 	vector<double> leftEq;
@@ -500,7 +534,8 @@ vector<cv::Point> detectLanes(Mat in)
 	Mat pointsRt = Mat::zeros(in.size(), in.type());
 	int nonZeroPixels = countNonZero(in);
 	vector<cv::Point> allPoints;
-
+	Mat tmp;
+	//cvtColor(in, tmp, COLOR_GRAY2BGR);
 
 	//the first time this is ever called do a throrough search
 	if (prevRightIdx == 0 && prevLeftIdx == 0)
@@ -509,10 +544,14 @@ vector<cv::Point> detectLanes(Mat in)
 		getLaneIndices(in, in.rows - 1, in.rows / 2, 0, in.cols / 2 - 1, in.cols / 2, curLtIdx, curRtIdx, ltFound, rtFound);
 		prevLeftIdx = curLtIdx;
 		prevRightIdx = curRtIdx;
+		//initialize index array with curLtIdx and curRtIdx
+		for (int i = 0; i < numWindowsY; i++)
+		{
+			rtIdx[i] = curRtIdx;
+			ltIdx[i] = curLtIdx;
+		}
 	}
 
-	if (nonZeroPixels < maxPixThresh)
-	{
 		//loop through each window detecting left and right lines by the columns having the most pixels
 		for (int i = 0; i < numWindowsY; i++)
 		{
@@ -528,6 +567,10 @@ vector<cv::Point> detectLanes(Mat in)
 				winStartRightX = ((in.cols - 1) - margin);
 			else if (winStartRightX <= 0)
 				winStartRightX = winStartLeftX + 700;
+
+		
+			ltFound = false;
+			rtFound = false;
 
 			getLaneIndices(in, windowStartY, in.rows / numWindowsY, winStartLeftX, winStartRightX, margin, curLtIdx, curRtIdx, ltFound, rtFound);
 
@@ -553,6 +596,12 @@ vector<cv::Point> detectLanes(Mat in)
 			{
 				ltIdx[i] = curLtIdx;
 			}
+
+			//cv::Point bottomLeft = (winStartLeftX, (i*in.rows / numWindowsY));
+			//cv::Point topRight = (winStartLeftX + margin, (i*in.rows / numWindowsY) + in.rows / numWindowsY);
+			//rectangle(tmp, cv::Point(winStartLeftX, 719 - (i*in.rows / numWindowsY)), cv::Point(winStartLeftX + margin, 719 - (i*in.rows / numWindowsY) + in.rows / numWindowsY), Scalar(110, 220, 0), 1, 8, 0);
+			//rectangle(tmp, cv::Point(winStartRightX, 719 - (i*in.rows / numWindowsY)), cv::Point(winStartRightX + margin, 719 - (i*in.rows / numWindowsY) + in.rows / numWindowsY), Scalar(110, 220, 0), 1, 8, 0);
+
 			generateFakeData(pointsLt, pointsRt, in.rows / numWindowsY, windowStartY, ltIdx[i], rtIdx[i]);
 		}
 
@@ -568,6 +617,8 @@ vector<cv::Point> detectLanes(Mat in)
 		rightEqReal = mPolyfit(pointsRt, true);
 		leftEq = mPolyfit(pointsLt, false);
 		rightEq = mPolyfit(pointsRt, false);
+
+		//imshow("detection", tmp);
 
 		if (lSmooth.size() >= SMOOTHING_WIN_SIZE)
 		{
@@ -585,19 +636,19 @@ vector<cv::Point> detectLanes(Mat in)
 		rSmooth.push_front(rightEq);
 		lSmoothReal.push_front(leftEqReal);
 		rSmoothReal.push_front(rightEqReal);
-	}//closes if (nonZeroPixels < maxPixThresh)
 
-	allPoints.clear();
-	if ((lSmooth.size() == SMOOTHING_WIN_SIZE) && (lSmooth.size() == SMOOTHING_WIN_SIZE))
-	{
-		allPoints = combinePoints(lSmooth, rSmooth);
-	}
-	else
-	{
-		allPoints = combinePoints(leftEq, rightEq);
-	}
 
-	return allPoints;
+		allPoints.clear();
+		if ((lSmooth.size() == SMOOTHING_WIN_SIZE) && (lSmooth.size() == SMOOTHING_WIN_SIZE))
+		{
+			allPoints = combinePoints(lSmooth, rSmooth);
+		}
+		else
+		{
+			allPoints = combinePoints(leftEq, rightEq);
+		}
+
+		return allPoints;
 }
 
 int main()
@@ -607,9 +658,12 @@ int main()
 	Mat camFrame,initFrame,filteredFrame,undistortedFrame,perspectiveFrame,warpedFrame,binaryWarpedFrame, colorWarpedFrame, processedFrame;
 	Mat intrinsic, distCoeff;
 	Mat M, Minv;
+	int metallicaRocks = 0;
 	vector<cv::Point> lanePoints;
+
+
 	//get the calibration matrixes
-	calibrate(intrinsic,distCoeff,false); //dont forget to uncomment out
+	calibrate(intrinsic,distCoeff,false); 
 	cout << "Finished Calibration\n";
 
 	//get the 3 x 3 matrix of the predefined perspective transform
@@ -618,7 +672,16 @@ int main()
 	camStream.open(".\\project_video.mp4");
 	bool notFinished = camStream.read(camFrame);
 
-	//this is the pipeline
+#if WRITE_VIDEO_ENABLED == 1
+	if (video.isOpened() == false)
+	{
+		int frame_width = camStream.get(CV_CAP_PROP_FRAME_WIDTH);
+		int frame_height = camStream.get(CV_CAP_PROP_FRAME_HEIGHT);
+		video.open("./project_video_solution.mp4", CV_FOURCC('M', 'P', '4', 'V'), 22, cv::Size(frame_width, frame_height), true);
+	}
+#endif
+
+	//this is the main loop pipeline!
 	while (notFinished == true)
 	{
 		//init frame is pristine and not manipulated
@@ -659,7 +722,15 @@ int main()
 		
 		//read the next frame
 		notFinished = camStream.read(camFrame);
+
+#if WRITE_VIDEO_ENABLED == 1
+		video.write(processedFrame);
+#endif
 	}
+
+#if WRITE_VIDEO_ENABLED == 1
+	video.release();
+#endif
 
 	cout << "Press Any Key to close console...";
 	cout.flush();

@@ -44,41 +44,8 @@ On line 628 of P4_Advanced_Lane_Lines.cpp, I call openCV's warpPerspective funct
 ![alt text][image3]
 
 #### 2.3 Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  
-The _applyFilters_ function in the main pipeline loop takes in a warped image and outputs a filtered binary image. I experiemented with several different strategies. Inititally, I focused on using only HSV and HSL thresholding, but I was not capturing the white lines to the extent that was necessary. Therefore, I added sobel detection to the HSV/HSL filtering strategy for my final implementatoin. The 4 filtered output and the sobel output is combined into one final image via a call top openCV's bitwiseOr
-```python
-void applyFilters(Mat in, Mat & out)
-{
-	Mat tmp,tmpHSV,tmpHLS,gray,sobelx;
+The _applyFilters_ function in the main pipeline loop takes in a warped image and outputs a filtered binary image. I experiemented with several different strategies. Inititally, I focused on using only HSV and HSL thresholding, but I was not capturing the white lines to the extent that was necessary. Therefore, I added sobel threshold in the x gradient. This sobel gradient did introduce a little noise so I applied a gaussianBlur prior to the input of the sobel threshold. In areas of the video that were in shadows or bright light, my algorithm had a tendency to lose the yellow lane. I resolved this be applying a LAB filter with thresholds that were empirically determined during testing.  The 4 filtered output and the sobel output is combined into one final image via a call top openCV's bitwiseOr
 
-	cv::cvtColor(in, tmpHLS, CV_RGB2HLS);
-	cv::cvtColor(in, tmpHSV, CV_RGB2HSV);
-
-	//Apply light filter in HLS space
-	inRange(tmpHLS, cv::Scalar(1, 1, 180), cv::Scalar(255, 255, 255), tmp);
-
-	out = tmp;
-	
-	//Apply HSV Filters to attempt to extract white and yellow lines
-	inRange(tmpHSV, cv::Scalar(0, 50, 240), cv::Scalar(180, 255, 255), tmp);
-	bitwise_or(tmp, out, out);
-
-	inRange(tmpHSV, cv::Scalar(0, 0, 240), cv::Scalar(40, 23, 255), tmp);
-	bitwise_or(tmp, out, out);
-
-	inRange(tmpHSV, cv::Scalar(150, 0, 230), cv::Scalar(180, 10, 255), tmp);
-	bitwise_or(tmp, out, out);
-
-	//Apply sobel detection which is similar to Canny edge detection
-	cvtColor(in, gray, CV_RGB2GRAY);
-	Sobel(gray, sobelx, CV_8U, 1, 0);
-
-	//if a matrix value is above threshold of 50 then make it 255 which is akin to 1 in a binary image
-	threshold(sobelx, sobelx, 50, 255, CV_THRESH_BINARY);
-
-	//combine sobel with HLS and HSV filtered matrix
-	bitwise_or(sobelx, out, out);
-}
-```
 ![alt text][image4]
 
 
@@ -98,52 +65,15 @@ This occurs in the insertCurvatureOffset function which is the final processing 
 ---
 Here's a [link to my video result](./project_video_solution.mp4). The code snippet below is my main processing loop
 
-```python
-	while (notFinished == true)
-	{
-		//init frame is pristine and not manipulated
-		initFrame = camFrame.clone();
-
-		//undistort current frame 
-		undistort(camFrame, undistortedFrame, intrinsic, distCoeff);
-	
-		//apply perspective transform
-		warpPerspective(undistortedFrame, warpedFrame, M, undistortedFrame.size());
-		
-		//apply filters and thresholding on warped image
-		applyFilters(warpedFrame, binaryWarpedFrame);
-		
-		//perform lane detection algorithm. Lane points contains the points 
-		//corresponding to the estimated equations for the left and right lanes
-		lanePoints = detectLanes(binaryWarpedFrame);
-		
-		const cv::Point* elementPoints[1] = { &lanePoints[0] };
-		int numberOfPoints = (int)lanePoints.size();
-
-		colorWarpedFrame = Mat::zeros(binaryWarpedFrame.size(), CV_8UC3);
-
-		//color the space in between the 2 detected lanes
-		fillPoly(colorWarpedFrame, elementPoints, &numberOfPoints, 1, Scalar(0, 255, 0), 8);
-
-		//unwarp image with highlighted lane back to original 
-		warpPerspective(colorWarpedFrame, colorWarpedFrame, Minv, colorWarpedFrame.size());
-
-		//overlay highlighted lane on original image
-		addWeighted(initFrame, 1, colorWarpedFrame, .3, 0, processedFrame);
-
-		//calculate and insert curvature and offset information 
-		insertCurvatureOffset(processedFrame);
-
-		imshow("processed frame", processedFrame);
-		waitKey(1);
-		
-		//read the next frame
-		notFinished = camStream.read(camFrame);
-	}
-```
 
 
 4. Discussion
 ---
-Doing the project in C++ rather than python did introduce some extra work. In particular, not having numpy to calculate the polynomial fit. However, I am confident that in the future I can develop in C+ + for openCV-based projects
+Doing the project in C++ rather than python did introduce some extra work. In particular, not having numpy to calculate the polynomial fit. However, I am confident that in the future I can develop in C+ + for openCV-based projects. A byproduct of this project was that I created a GUI based tool that allows me to apply different filters on real-time video while modifying there threshold values. I expect this software to be a useful personal tool for future endeavors
+
+I do not expect the algorithm to perform consistently at different times of the day due to my filters dependency on light and color (which is also dependent upon light). Therefore, I believe an edge detection based algorithm would have more potential. Similarly, I do not expect the algorithm to perform across various environmental conditions (snow,rain, etc). 
+
+My algorithm could be made more robust with more error checking. For example, I would not be comfortable letting this algorithm control my vehicle knowing that there are no gaurds in the code (other than my sliding average) that would prevent a drastic change in the predicted lane location from one frame to the next. 
+
+
 
