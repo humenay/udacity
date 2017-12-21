@@ -69,11 +69,11 @@ Here's a [link to my video result](./project_video_solution.mp4). The code snipp
 
 4. Discussion
 ---
-Doing the project in C++ rather than python did introduce some extra work. In particular, not having numpy to calculate the polynomial fit. However, I am confident that in the future I can develop in C+ + for openCV-based projects. A byproduct of this project was that I created a GUI based tool that allows me to apply different filters on real-time video while modifying there threshold values. I expect this software to be a useful personal tool for future endeavors
+Implementing the project in C++, rather than python, did introduce some extra work. In particular, not having numpy to calculate the polynomial fit.  A byproduct of this project was that I created a GUI based tool that allows me to apply different filters on real-time video while modifying there threshold values. I expect this software to be a useful personal tool for future endeavors
 
-I do not expect the algorithm to perform consistently at different times of the day due to my filters dependency on light and color (which is also dependent upon light). Therefore, I believe an edge detection based algorithm would have more potential. Similarly, I do not expect the algorithm to perform across various environmental conditions (snow,rain, etc). 
+I do not expect my intitial algorithm to perform consistently at different times of the day due to my filters dependency on light and color (which is also dependent upon light). Therefore, I believe an edge detection based algorithm would has greater potential. 
 
-My algorithm could be made more robust with more error checking. For example, I would not be comfortable letting this algorithm control my vehicle knowing that there are no gaurds in the code (other than my sliding average) that would prevent a drastic change in the predicted lane location from one frame to the next. 
+My algorithm could be made more reliable with addiotional testing and error checking. For example, I would not be comfortable letting this algorithm control my vehicle knowing that there are no gaurds in the code (other than my moving average) that would prevent a drastic change in the predicted lane location from one frame to the next whichc ould possibly occur if a false positive were to occur. 
 
 
 
