@@ -13,7 +13,7 @@ The goals / steps of this project are the following:
 * Warp the detected lane boundaries back onto the original image.
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
-**_It is worth noting, that the class has been 100% python-based. However, there were no code requirements for this project so I decided to implement the project in C++ to famailiarize myself with this API_**
+**_It is worth noting, that the class has been 100% python-based. However, there were no code requirements for this project so I decided to implement the project in C++ to famailiarize myself with this API_. The code was in conjunction w/ openCV version 3.2**
 
 [//]: # (Image References)
 
