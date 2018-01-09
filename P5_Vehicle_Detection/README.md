@@ -31,7 +31,7 @@ The goals / steps of this project are the following:
 [heatmap3]: ./output_images/heat-map3.png
 [heatmap4]: ./output_images/heat-map4.png
 [heatmap5]: ./output_images/heat-map5.png
-[video1]: ./project_video.mp4
+[video1]: ./processed_project_video.mp4
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
  Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
